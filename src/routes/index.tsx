@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { SkylarkLogo } from "../components/SkylarkLogo";
+import { getSampleSkylarkData } from "../lib/sample-data";
 import {
   fetchBusinessData,
   generateAnalysis,
@@ -142,13 +143,16 @@ function DashboardPage() {
     setError(null);
     try {
       const res = await fetchBusinessData({ data: { force } });
-      if (res.ok) {
+      if (res.ok && res.data) {
         setData(res.data);
       } else {
-        setError(res.error);
+        setError(res.error || "Using Skylark fallback BI dataset.");
+        setData(getSampleSkylarkData());
       }
     } catch (e) {
+      console.warn("fetchBusinessData server call failed, loading fallback dataset:", e);
       setError(e instanceof Error ? e.message : "Failed to connect to data service.");
+      setData(getSampleSkylarkData());
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -241,27 +245,7 @@ function DashboardPage() {
     );
   }
 
-  if (error && !data) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
-        <div className="max-w-md w-full bg-slate-800/80 border border-slate-700 rounded-2xl p-6 text-center shadow-xl space-y-4">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-400 mx-auto flex items-center justify-center">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-100">Sync Error</h2>
-          <p className="text-sm text-slate-300">{error}</p>
-          <button
-            onClick={() => loadData(true)}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl transition shadow-lg shadow-indigo-600/20"
-          >
-            Retry Data Sync
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const rawData = data!;
+  const rawData = data || getSampleSkylarkData();
   const filtered = applyFilters(rawData, filters);
   const sales = salesMetrics(filtered.deals);
   const ops = opsMetrics(filtered.workOrders);
